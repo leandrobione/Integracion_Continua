@@ -1,32 +1,69 @@
-# This config was automatically generated from your source code
-# Stacks detected: deps:node:.
 version: 2.1
-orbs:
-  node: circleci/node@5
+
 jobs:
-  test-node:
-    # Install node dependencies and run tests
-    executor: node/default
+  test:
+    docker:
+      - image: cimg/node:18.20.3
     steps:
       - checkout
-      - node/install-packages:
-          pkg-manager: npm
       - run:
-          name: Run tests
-          command: npm test --passWithNoTests
+          name: Instalar Mocha y Chai
+          command: npm install mocha chai
+      - run:
+          name: Ejecutar pruebas
+          command: npx mocha test/test.js
+      - run:    
+          name: Notificar a Slack 
+          command: |
+            curl -X POST -H 'Content-type: application/json' --data '{"text":"Test pasados con éxito."}' $SLACK_WEBHOOK_URL
+
   deploy:
-    # This is an example deploy job, not actually used by the workflow
     docker:
-      - image: cimg/base:stable
+      - image: cimg/node:18.20.3
     steps:
-      # Replace this with steps to deploy to users
+      - checkout
+      - run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST $RENDER_API_DEPLOY)
+          if [ $response -eq 200 ]; then
+            echo "Deployment successful"
+            curl -X POST -H 'Content-type: application/json' --data '{"text":"Deploy iniciado!"}' $SLACK_WEBHOOK_URL
+          else
+            echo "Deployment failed with HTTP status code $response"
+            curl -X POST -H 'Content-type: application/json' --data '{"text":"¡Ha fallado el Deploy!"}' "$SLACK_WEBHOOK_URL"
+            exit 1
+          fi
       - run:
-          name: deploy
-          command: '#e.g. ./deploy.sh'
+          name: Esperar a que el deploy se complete
+          command: |
+            deploy_status="pending"
+            while [ "$deploy_status" != "live" ]; do
+              response=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/srv-cpj78tuct0pc7384u8gg/deploys")
+              echo "Render API response: $response"
+              deploy_status=$(echo $response | jq -r '.[0].deploy.status') # Se toma el estado del primer despliegue en la lista
+              echo "Current deploy status: $deploy_status"
+              if [ "$deploy_status" == "failed" ]; then
+                echo "Deployment failed."
+                curl -X POST -H 'Content-type: application/json' --data '{"text":"¡El deploy ha fallado!"}' $SLACK_WEBHOOK_URL
+                exit 1
+              fi
+              sleep 10
+            done
+            echo "Deployment completed successfully."
+            curl -X POST -H 'Content-type: application/json' --data '{"text":"Deploy completado con éxito!"}' $SLACK_WEBHOOK_URL
+
+  
 workflows:
-  build-and-test:
+  version: 2
+  build_and_deploy:
     jobs:
-      - test-node
-    # - deploy:
-    #     requires:
-    #       - test-node
+      - test:
+          filters:
+            branches:
+              only: master
+      - deploy:
+          requires:
+            - test
+          filters:
+            branches:
+              only: master
+      
