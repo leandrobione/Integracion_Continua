@@ -1,6 +1,7 @@
-export function sumar_uno(a){
+export function sumar(a){
     return a++;
 }
-export function restar_uno(a){
+
+export function restar(a){
     return a--;
 }
