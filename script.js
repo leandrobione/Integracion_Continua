@@ -16,8 +16,8 @@ function restarUno() {
     actualizarDisplay(nuevoValor);
 }
 
-window.sumar = sumarUno;
-window.restar = restarUno;
+window.sumarUno = sumarUno;
+window.restarUno = restarUno;
 
 document.addEventListener('DOMContentLoaded', () => {
     actualizarDisplay(0);
