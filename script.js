@@ -1,20 +1,10 @@
-import { sumar, restar } from './funciones.js';
+import sum from "./funciones.js";
 
-function actualizarDisplay(nuevoValor) {
-    document.getElementById('count').innerText = nuevoValor;
+function sumar() {
+    var num1 = document.getElementById('num1').value;
+    var num2 = document.getElementById('num2').value;
+    var result = sum(num1, num2);
+    document.getElementById('resultado').innerText = result;
 }
 
-function sumarUno() {
-    let valorActual = parseInt(document.getElementById('count').innerText);
-    let nuevoValor = sumar(valorActual);
-    actualizarDisplay(nuevoValor);
-}
-
-function restarUno() {
-    let valorActual = parseInt(document.getElementById('count').innerText);
-    let nuevoValor = restar(valorActual);
-    actualizarDisplay(nuevoValor);
-}
-
-window.sumarUno = sumarUno;
-window.restarUno = restarUno;
+window.sumar = sumar;
